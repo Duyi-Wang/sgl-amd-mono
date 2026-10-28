@@ -31,6 +31,8 @@ def server(**kw):
     return SimpleNamespace(
         **{
             "load_format": "auto",
+            "disaggregation_mode": "null",
+            "disaggregation_transfer_backend": "mooncake",
             "speculative_algorithm": None,
             "speculative_num_draft_tokens": None,
             **kw,

@@ -81,6 +81,8 @@ SGLANG_READS = {
         "enable_encoder_swa_bounded_replay",
         "expert_distribution_recorder_mode",
         "load_format",
+        "disaggregation_mode",
+        "disaggregation_transfer_backend",
     ),
     "srt/environ.py": (
         "SGLANG_HACK_FLASHMLA_BACKEND",
@@ -172,6 +174,12 @@ def _config_disable_reasons(cfg, hf_config) -> list[str]:
     from sgl_amd_mono.deepseek_v4.gfx950.config import checkpoint_refusal
 
     reasons = []
+    mode = cfg.disaggregation_mode
+    if mode not in (None, "null"):
+        if mode != "decode":
+            reasons.append("PD monokernels support the decode role only")
+        elif cfg.disaggregation_transfer_backend != "mori":
+            reasons.append("PD monokernels require the mori transfer backend")
     why = checkpoint_refusal(hf_config)
     if why is not None:
         reasons.append(f"the kernels are built for DeepSeek-V4-Pro: {why}")
@@ -481,7 +489,8 @@ SPEC = MonoSpec(
     devices={
         "gfx950": DeviceLimits(widths=WIDTHS, tp_sizes=(8,), resident_blocks=BLOCKS)
     },
-    features=frozenset({Feature.SPECULATIVE_DECODING}),
+    # MoRI transfers into the same KV and compressor-state buffers the kernels use.
+    features=frozenset({Feature.SPECULATIVE_DECODING, Feature.PD_DISAGGREGATION}),
     requires=Requirements(
         dtypes=frozenset({"bfloat16"}),
         attention_backends=frozenset({"dsv4"}),
